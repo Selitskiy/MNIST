@@ -3,48 +3,51 @@ clearvars -global;
 clear all; close all; clc;
 
 addpath('~/ANNLib/');
+addpath('~/MNIST/');
+
+% MNIST
+load('mnist.mat');
+
+XTrain = training.images;
+YTrain = training.labels;
+
+XTest = test.images;
+YTest = test.labels;
+
+n = training.height;
+m = training.width;
+l = training.count;
+lts = test.count;
+
+XTrainF = reshape(XTrain,[n*m,l]);
+XTestF = reshape(XTest,[n*m,lts]);
 
 
-%load('mnist.mat');
+% Matlab's Digits
+%[XTrain,YTrain,anglesTrain] = digitTrain4DArrayData;
+%[XTest,YTest,anglesTest] = digitTest4DArrayData;
 
-%XTrain = training.images;
-%YTrain = training.labels;
+%[n, m, c, l] = size(XTrain);
+%[~, ~, ~, lts] = size(XTest);
 
-%XTest = test.images;
-%YTest = test.labels;
-
-%n = training.height;
-%m = training.width;
-%l = training.count;
-%lts = test.count;
-
-%XTrainF = reshape(XTrain,[n*m,l]);
-%XTestF = reshape(XTest,[n*m,lts]);
+%XTrainF = reshape(XTrain,[n*m,l,c]);
+%XTestF = reshape(XTest,[n*m,l,c]);
 
 
-
-[XTrain,YTrain,anglesTrain] = digitTrain4DArrayData;
-[XTest,YTest,anglesTest] = digitTest4DArrayData;
-
-[n, m, c, l] = size(XTest);
-
-XTrainF = reshape(XTrain,[n*m,l,c]);
-XTestF = reshape(XTest,[n*m,l,c]);
-
-
+% Fltten labels
 YTrainD = double(YTrain)';
 YTestD = double(YTest)';
 
+% Injection one-hot
 inj = 10;
 YTrainF = zeros(inj,l);
-YTestF = zeros(inj,l);
+YTestF = zeros(inj,lts);
 
 for i = 1:inj
     YTrainF(i, YTrainD==i) = 1;
     YTestF(i, YTestD==i) = 1;
 end
 
-%%XTestF2 = XTestF;
 
 % real injection
 %XYTrainF = vertcat(XTrainF,YTrainD);
@@ -66,17 +69,20 @@ y_out=n*m;
 t_out=t_in;
 
 ini_rate = 0.0002; 
-max_epoch = 500;
+max_epoch = 100;
 
 regNet = Dp2BTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/n);
 
 %%
-            regNet.mb_size = 512;
+% Matlab's Digits
+%regNet.mb_size = 128;
+% MNIST
+regNet.mb_size = 2048;
 
-            regNet = Create(regNet);
+regNet = Create(regNet);
 
 %%
-%load('digits_ae.mat', 'regNet');
+load('mnist_ae.mat', 'regNet');
 
 %%
 i=1;
@@ -92,7 +98,7 @@ i=1;
         gpuDevice([]); 
 
 %%
-%save('digits_ae.mat', 'regNet');
+save('mnist_ae.mat', 'regNet');
 
 %% activations
         % GPU on
@@ -178,8 +184,8 @@ for i=1:10
     title(string(i-1));
 end
 
-%%
-i = 1 + floor(rand()*l);
+%% random results
+i = 1 + floor(rand()*lts);
 
 colormap(gray)
 colorbar
@@ -217,3 +223,24 @@ image(I2t .* 255);
 
 XTestF2(1,i)
 
+%% difficult results
+idx = [2997 252 3697 9861 276 9686 5990 3062 6493 5895 5281 9201 6994 9813 4599 5625 342 2845 5968 6659];
+[~,ni] = size(idx);
+
+colormap(gray)
+
+for i = 1:ni
+    subplot(4,10,i);
+    If = XTestF(:,idx(i));
+    I2 = reshape(If, [n, m]);
+
+    image(I2 .* 255);   
+end
+
+for i = 1:ni
+    subplot(4,10,ni+i);
+    Ift = XTestF2(:,idx(i));
+    I2t = reshape(Ift, [n, m]);
+
+    image(I2t .* 255);
+end
