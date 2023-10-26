@@ -8,19 +8,26 @@ addpath('~/MNIST/');
 % MNIST
 load('mnist.mat');
 
-XTrain = training.images;
-YTrain = training.labels;
-
-XTest = test.images;
-YTest = test.labels;
-
 n = training.height;
 m = training.width;
 l = training.count;
 lts = test.count;
 
-XTrainF = reshape(XTrain,[n*m,l]);
+XTest = test.images;
+YTest = test.labels;
+
 XTestF = reshape(XTest,[n*m,lts]);
+
+%% Continous learning
+k=3; %6;
+sub_len = l/k;
+
+for i = 1:k
+
+XTrain = training.images(:,:,(i-1)*sub_len+1:i*sub_len);
+YTrain = training.labels((i-1)*sub_len+1:i*sub_len);
+
+XTrainF = reshape(XTrain,[n*m,sub_len]);
 
 
 % Matlab's Digits
@@ -40,12 +47,12 @@ YTestD = double(YTest)';
 
 % Injection one-hot
 inj = 10;
-YTrainF = zeros(inj,l);
+YTrainF = zeros(inj,sub_len);
 YTestF = zeros(inj,lts);
 
-for i = 1:inj
-    YTrainF(i, YTrainD==i) = 1;
-    YTestF(i, YTestD==i) = 1;
+for j = 1:inj
+    YTrainF(j, YTrainD==j) = 1;
+    YTestF(j, YTestD==j) = 1;
 end
 
 
@@ -71,34 +78,51 @@ t_out=t_in;
 ini_rate = 0.0002; 
 max_epoch = 100;
 
-regNet = Dp2BTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/n);
+modelName = 'mnist_ae_relu';
+modelFile = strcat(modelName, '.', string(i), '.mat');
 
 %%
-% Matlab's Digits
-%regNet.mb_size = 128;
-% MNIST
-regNet.mb_size = 2048;
+if isfile(modelFile)
+    fprintf('Loading %s %d\n', modelFile, i);
+    load(modelFile, 'regNet');
+else
+    if i == 1
 
-regNet = Create(regNet);
+        regNet = Dp2BTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/n);
 
+        %%
+        % Matlab's Digits
+        %regNet.mb_size = 128;
+        % MNIST
+        regNet.mb_size = 2048;
+
+        regNet = Create(regNet);
+    end
+
+    fprintf('Training %s %d\n', modelFile, i);
 %%
-load('mnist_ae.mat', 'regNet');
-
-%%
-i=1;
+%i=1;
         % GPU on
         gpuDevice(1);
         reset(gpuDevice(1));
     
         %regNet = regNet.Train(i, XTrainF, YTrainF);
-        regNet = regNet.Train(i, XYTrainF, XTrainF);
+        regNet = regNet.Train(1, XYTrainF, XTrainF);
 
         % GPU off
         delete(gcp('nocreate'));
         gpuDevice([]); 
 
-%%
-save('mnist_ae.mat', 'regNet');
+    %%
+    fprintf('Saving %s %d\n', modelFile, i);
+    save(modelFile, 'regNet');
+
+% end no file - train
+end
+
+% end of contionous learning
+end
+
 
 %% activations
         % GPU on
@@ -176,7 +200,7 @@ colormap(gray)
 colorbar
 
 for i=1:10
-    subplot(4,3,i);
+    subplot(3,4,i);
     If = XGenF2(:,i);
     I2 = reshape(If, [n, m]);
     
