@@ -19,7 +19,7 @@ YTest = test.labels;
 XTestF = reshape(XTest,[n*m,lts]);
 
 %% Continous learning
-k=3; %6;
+k=1; %6;
 sub_len = l/k;
 
 for i = 1:k
@@ -78,8 +78,12 @@ t_out=t_in;
 ini_rate = 0.0002; 
 max_epoch = 100;
 
-modelName = 'mnist_ae_relu';
-modelFile = strcat(modelName, '.', string(i), '.mat');
+modelName = 'mnist_ae_vt';
+if k == 1
+    modelFile = strcat(modelName, '.mat');
+else
+    modelFile = strcat(modelName, '.', string(i), '.mat');
+end
 
 %%
 if isfile(modelFile)
@@ -123,6 +127,9 @@ end
 % end of contionous learning
 end
 
+%% LrReLU weights
+histogram(regNet.lGraph.Layers(5,1).A) %28
+histogram(regNet.lGraph.Layers(7,1).A) %43905
 
 %% activations
         % GPU on
