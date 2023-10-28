@@ -19,7 +19,7 @@ YTest = test.labels;
 XTestF = reshape(XTest,[n*m,lts]);
 
 %% Continous learning
-k=1; %6;
+k=6; %6;
 sub_len = l/k;
 
 for i = 1:k
@@ -78,7 +78,7 @@ t_out=t_in;
 ini_rate = 0.0002; 
 max_epoch = 100;
 
-modelName = 'mnist_ae_vt';
+modelName = 'mnist_ae';
 if k == 1
     modelFile = strcat(modelName, '.mat');
 else
@@ -128,8 +128,9 @@ end
 end
 
 %% LrReLU weights
-histogram(regNet.lGraph.Layers(5,1).A) %28
-histogram(regNet.lGraph.Layers(7,1).A) %43905
+%histogram(regNet.lGraph.Layers(5,1).A) %28
+histogram(regNet.lGraph.Layers(7,1).A,'BinLimits',[0.45,1], Normalization="percentage") %43905
+ytickformat("percentage") 
 
 %% activations
         % GPU on
