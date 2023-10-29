@@ -117,7 +117,7 @@ else
 
     %%
     fprintf('Saving %s %d\n', modelFile, i);
-    save(modelFile, 'regNet');
+    %save(modelFile, 'regNet');
 
 % end no file - train
 end
@@ -202,8 +202,8 @@ delete(gcp('nocreate'));
 gpuDevice([]);
 
 %% Display Gen
-colormap(gray)
-colorbar
+colormap(hot)
+%colorbar
 
 for i=1:10
     subplot(3,4,i);
@@ -218,7 +218,7 @@ end
 i = 1 + floor(rand()*lts);
 
 colormap(gray)
-colorbar
+%colorbar
 
 subplot(2,2,1);
 If = XTestF(:,i);
@@ -273,4 +273,44 @@ for i = 1:ni
     I2t = reshape(Ift, [n, m]);
 
     image(I2t .* 255);
+end
+
+%% mutated results
+XTestM = XTestF(:,idx(11:20));
+XTestMM = repmat(XTestM', 10, 1)';
+
+YTestM = zeros([10, 100]);
+
+
+for i = 1:10 %mutatuon
+    for j = 1:inj %seed
+        YTestM(i,(i-1)*10+j) = 1;
+    end
+end
+
+XYTestM = vertcat(XTestMM,YTestM);
+
+% GPU on
+gpuDevice(1);
+reset(gpuDevice(1));
+
+predictedScores = predict(regNet.trainedNet, XYTestM');
+XTestM2 = predictedScores';
+
+% GPU off
+delete(gcp('nocreate'));
+gpuDevice([]);
+
+%% mutated display
+colormap(gray)
+
+for i = 1:10 %mutation
+    for j = 1:inj %seed
+        subplot(10,10,(i-1)*10+j);
+        Im = XTestM2(:,(i-1)*10+j);
+        I2m = reshape(Im, [n, m]);
+
+        image(I2m .* 255);
+        title(strcat('m:',string(i-1),' s:',string(j-1)));
+    end
 end
