@@ -22,6 +22,16 @@ XTestF = reshape(XTest,[n*m,lts]);
 k=1; %6;
 sub_len = l/k;
 
+% sort digits
+if k > 1
+    [sTLabels, IsTLabels] = sort(training.labels);
+    sTImages = training.images(:,:,IsTLabels);
+
+    training.labels = sTLabels;
+    training.images = sTImages;
+end
+
+
 for i = 1:k
 
 XTrain = training.images(:,:,(i-1)*sub_len+1:i*sub_len);
@@ -29,16 +39,6 @@ YTrain = training.labels((i-1)*sub_len+1:i*sub_len);
 
 XTrainF = reshape(XTrain,[n*m,sub_len]);
 
-
-% Matlab's Digits
-%[XTrain,YTrain,anglesTrain] = digitTrain4DArrayData;
-%[XTest,YTest,anglesTest] = digitTest4DArrayData;
-
-%[n, m, c, l] = size(XTrain);
-%[~, ~, ~, lts] = size(XTest);
-
-%XTrainF = reshape(XTrain,[n*m,l,c]);
-%XTestF = reshape(XTest,[n*m,l,c]);
 
 
 % Fltten labels
@@ -78,7 +78,7 @@ t_out=t_in;
 ini_rate = 0.0002; 
 max_epoch = 100;
 
-modelName = 'mnist_ae';
+modelName = 'mnist_vis3x3ae';
 if k == 1
     modelFile = strcat(modelName, '.mat');
 else
@@ -92,15 +92,13 @@ if isfile(modelFile)
 else
     if i == 1
 
-        regNet = Dp2BTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/n);
+        regNet = vis3x3BTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/n);
 
         %%
-        % Matlab's Digits
-        %regNet.mb_size = 128;
-        % MNIST
         regNet.mb_size = 2048;
 
         regNet = Create(regNet);
+
     end
 
     fprintf('Training %s %d\n', modelFile, i);
@@ -128,9 +126,9 @@ end
 end
 
 %% LrReLU weights
-%histogram(regNet.lGraph.Layers(5,1).A) %28
-histogram(regNet.lGraph.Layers(7,1).A,'BinLimits',[0.45,1], Normalization="percentage") %43905
-ytickformat("percentage") 
+%histogram(regNet.lGraph.Layers(6,1).A) %28
+%histogram(regNet.lGraph.Layers(8,1).A,'BinLimits',[0.45,1], Normalization="percentage") %43905
+%ytickformat("percentage") 
 
 %% activations
         % GPU on
@@ -229,25 +227,25 @@ I2 = reshape(If, [n, m]);
 image(I2 .* 255);
 
 
+%subplot(2,2,2);
+%%Ifp = XTestF2(:,i);
+%Ifp = actn(1:regNet.m_in-inj,i);
+%I2p = reshape(Ifp, [n, m]);
+
+%image(I2p .* 255);
+
+
+%subplot(2,2,3);
+%I2m = I2 .* I2p;
+
+%ma = max(I2m,[],'all');
+%mi = min(I2m,[],'all');
+%I2n = (I2m - mi)/(ma - mi);
+
+%image(I2n .* 255);
+
+
 subplot(2,2,2);
-%Ifp = XTestF2(:,i);
-Ifp = actn(1:regNet.m_in-inj,i);
-I2p = reshape(Ifp, [n, m]);
-
-image(I2p .* 255);
-
-
-subplot(2,2,3);
-I2m = I2 .* I2p;
-
-ma = max(I2m,[],'all');
-mi = min(I2m,[],'all');
-I2n = (I2m - mi)/(ma - mi);
-
-image(I2n .* 255);
-
-
-subplot(2,2,4);
 Ift = XTestF2(:,i);
 I2t = reshape(Ift, [n, m]);
 
