@@ -67,12 +67,12 @@ XYTestF = vertcat(XTestF,YTestF);
 
 %%
 x_off=0;
-x_in=n*m;
+x_in=n*m+inj;
 t_in=1;
 
 y_off=0;
 %y_out=1;
-y_out=inj;
+y_out=n*m;
 t_out=t_in;
 
 ini_rate = 0.0002; 
@@ -92,7 +92,7 @@ if isfile(modelFile)
 else
     if i == 1
 
-        regNet = vis3x3BTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/3, 1/9, 9, 9, 10);
+        regNet = residualVis3x3BTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/3, 1/9, 9, 9, 10);
 
         %%
         regNet.mb_size = 2048;
@@ -108,7 +108,8 @@ else
         gpuDevice(1);
         reset(gpuDevice(1));
     
-        regNet = regNet.Train(1, XTrainF, YTrainF);
+        %regNet = regNet.Train(i, XTrainF, YTrainF);
+        regNet = regNet.Train(1, XYTrainF, XTrainF);
 
         % GPU off
         delete(gcp('nocreate'));
@@ -131,17 +132,17 @@ end
 
 %% activations
         % GPU on
-%        gpuDevice(1);
-%        reset(gpuDevice(1));
+        gpuDevice(1);
+        reset(gpuDevice(1));
         
-%act1 = activations(regNet.trainedNet, XYTestF(:,:)', 'b_k_hid1');
-%ma = max(act1,[],'all');
-%mi = min(act1,[],'all');
-%actn = (act1 - mi)/(ma - mi);
+act1 = activations(regNet.trainedNet, XYTestF(:,:)', 'b_k_hid1');
+ma = max(act1,[],'all');
+mi = min(act1,[],'all');
+actn = (act1 - mi)/(ma - mi);
 
         % GPU off
-%        delete(gcp('nocreate'));
-%        gpuDevice([]); 
+        delete(gcp('nocreate'));
+        gpuDevice([]); 
 
 %%
 %i = 1 + floor(rand()*l);
@@ -163,15 +164,12 @@ end
 gpuDevice(1);
 reset(gpuDevice(1));
 
-predictedScores = predict(regNet.trainedNet, XTestF');
+predictedScores = predict(regNet.trainedNet, XYTestF');
 XTestF2 = predictedScores';
 
 % GPU off
 delete(gcp('nocreate'));
 gpuDevice([]);
-
-[M, I]=max(XTestF2,[],1);
-acc = sum(I == (YTestD + 1))/lts
 
 %% Generate
 XGenF = zeros([n*m, 10]);
@@ -196,7 +194,7 @@ XYGenF = vertcat(XGenF,YGenF);
 gpuDevice(1);
 reset(gpuDevice(1));
 
-predictedScores = predict(regNet.trainedNet, XGenF');
+predictedScores = predict(regNet.trainedNet, XYGenF');
 XGenF2 = predictedScores';
 
 % GPU off
@@ -209,7 +207,7 @@ colormap(hot)
 
 for i=1:10
     subplot(3,4,i);
-    If = XGenF2(1:n*m,i);
+    If = XGenF2(:,i);
     I2 = reshape(If, [n, m]);
     
     image(I2 .* 255);
@@ -223,11 +221,11 @@ colormap(gray)
 %colorbar
 
 subplot(2,2,1);
-If = XTestF(1:n*m,i);
+If = XTestF(:,i);
 I2 = reshape(If, [n, m]);
 
 image(I2 .* 255);
-title(string(YTest(i)+1));
+
 
 %subplot(2,2,2);
 %%Ifp = XTestF2(:,i);
@@ -248,12 +246,12 @@ title(string(YTest(i)+1));
 
 
 subplot(2,2,2);
-Ift = XTestF2(1:n*m,i);
+Ift = XTestF2(:,i);
 I2t = reshape(Ift, [n, m]);
 
 image(I2t .* 255);
-title(string(I(i)));
-%XTestF2(1,i)
+
+XTestF2(1,i)
 
 %% difficult results
 idx = [2997 252 3697 9861 276 9686 5990 3062 6493 5895 5281 9201 6994 9813 4599 5625 342 2845 5968 6659];
@@ -263,7 +261,7 @@ colormap(gray)
 
 for i = 1:ni
     subplot(4,10,i);
-    If = XTestF(1:n*m,idx(i));
+    If = XTestF(:,idx(i));
     I2 = reshape(If, [n, m]);
 
     image(I2 .* 255);   
@@ -271,7 +269,7 @@ end
 
 for i = 1:ni
     subplot(4,10,ni+i);
-    Ift = XTestF2(1:n*m,idx(i));
+    Ift = XTestF2(:,idx(i));
     I2t = reshape(Ift, [n, m]);
 
     image(I2t .* 255);
@@ -297,7 +295,7 @@ XYTestM = vertcat(XTestMM,YTestM);
 gpuDevice(1);
 reset(gpuDevice(1));
 
-predictedScores = predict(regNet.trainedNet, XTestM');
+predictedScores = predict(regNet.trainedNet, XYTestM');
 XTestM2 = predictedScores';
 
 % GPU off
@@ -307,14 +305,14 @@ gpuDevice([]);
 %% mutated display
 colormap(gray)
 
-for i = 0:10 %mutation
+for i = 0:11 %mutation
     for j = 1:inj %seed
         subplot(12,10,i*10+j);
 
         if i==0
-            Im = XTestF(1:n*m,idx(d*inj+j));
+            Im = XTestF(:,idx(d*inj+j));
         else
-            Im = XTestM2(1:n*m,(i-1)*10+j);
+            Im = XTestM2(:,(i-1)*10+j);
         end
 
         I2m = reshape(Im, [n, m]);

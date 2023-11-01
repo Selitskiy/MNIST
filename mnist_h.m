@@ -72,7 +72,7 @@ t_in=1;
 
 y_off=0;
 %y_out=1;
-y_out=inj;
+y_out=n*m+inj;
 t_out=t_in;
 
 ini_rate = 0.0002; 
@@ -108,7 +108,7 @@ else
         gpuDevice(1);
         reset(gpuDevice(1));
     
-        regNet = regNet.Train(1, XTrainF, YTrainF);
+        regNet = regNet.Train(1, XTrainF, XYTrainF);
 
         % GPU off
         delete(gcp('nocreate'));
@@ -131,17 +131,17 @@ end
 
 %% activations
         % GPU on
-%        gpuDevice(1);
-%        reset(gpuDevice(1));
+        gpuDevice(1);
+        reset(gpuDevice(1));
         
-%act1 = activations(regNet.trainedNet, XYTestF(:,:)', 'b_k_hid1');
-%ma = max(act1,[],'all');
-%mi = min(act1,[],'all');
-%actn = (act1 - mi)/(ma - mi);
+act1 = activations(regNet.trainedNet, XYTestF(:,:)', 'b_k_hid1');
+ma = max(act1,[],'all');
+mi = min(act1,[],'all');
+actn = (act1 - mi)/(ma - mi);
 
         % GPU off
-%        delete(gcp('nocreate'));
-%        gpuDevice([]); 
+        delete(gcp('nocreate'));
+        gpuDevice([]); 
 
 %%
 %i = 1 + floor(rand()*l);
@@ -170,7 +170,7 @@ XTestF2 = predictedScores';
 delete(gcp('nocreate'));
 gpuDevice([]);
 
-[M, I]=max(XTestF2,[],1);
+[M, I]=max(XTestF2(y_out-inj+1:y_out,:),[],1);
 acc = sum(I == (YTestD + 1))/lts
 
 %% Generate
