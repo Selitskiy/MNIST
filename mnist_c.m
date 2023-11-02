@@ -16,6 +16,13 @@ lts = test.count;
 XTest = test.images;
 YTest = test.labels;
 
+XTest3C = zeros([n, m, 3, lts]);
+XTest3C(:, :, 1, :) = XTest;
+XTest3C(:, :, 2, :) = XTest;
+XTest3C(:, :, 3, :) = XTest;
+YTest3D = categorical(YTest);
+
+
 XTestF = reshape(XTest,[n*m,lts]);
 
 %% Continous learning
@@ -31,11 +38,17 @@ if k > 1
     training.images = sTImages;
 end
 
-
-for i = 1:k
+i = 1;
+%for i = 1:k
 
 XTrain = training.images(:,:,(i-1)*sub_len+1:i*sub_len);
 YTrain = training.labels((i-1)*sub_len+1:i*sub_len);
+
+XTrain3C = zeros([n, m, 3, l]);
+XTrain3C(:, :, 1, :) = XTrain;
+XTrain3C(:, :, 2, :) = XTrain;
+XTrain3C(:, :, 3, :) = XTrain;
+YTrain3D = categorical(YTrain);
 
 XTrainF = reshape(XTrain,[n*m,sub_len]);
 
@@ -92,7 +105,8 @@ if isfile(modelFile)
 else
     if i == 1
 
-        regNet = vis3x3BTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/3, 1/9, 9, 9, 10);
+        %regNet = vis3x3BTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/3, 1/9, 9, 9, 10);
+        regNet = visBTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/n*20);
 
         %%
         regNet.mb_size = 2048;
@@ -122,7 +136,7 @@ else
 end
 
 % end of contionous learning
-end
+%end
 
 %% LrReLU weights
 %histogram(regNet.lGraph.Layers(6,1).A) %28
@@ -332,3 +346,69 @@ for i = 0:10 %mutation
     end
 end
 
+
+%% SOTA comparison
+
+%% Load Pre-trained Network (AlexNet)
+% AlexNet is a pre-trained network trained on 1000 object categories. 
+alex = alexnet('Weights','none');
+layers = alex;
+
+% Review Network Architecture 
+%layers = alex.Layer;
+
+% Modify Pre-trained Network 
+% AlexNet was trained to recognize 1000 classes, we need to modify it to
+% recognize just nClasses classes. 
+n_ll = 25;
+n_sml = n_ll - 2;
+layers(1) = imageInputLayer([28, 28, 3]);
+layers(9) = maxPooling2dLayer(2, 'Name', 'pool2');
+layers(16) = maxPooling2dLayer(1, 'Name', 'pool5');
+layers(n_sml) = fullyConnectedLayer(inj); % change this based on # of classes
+layers(n_ll) = classificationLayer;
+
+% Perform Transfer Learning
+% For transfer learning we want to change the weights of the network ever so slightly. How
+% much a network is changed during training is controlled by the learning
+% rates. 
+
+mb_size = 2048;
+opts = trainingOptions('adam', ...
+                'ExecutionEnvironment','auto',...
+                'Shuffle', 'every-epoch',...
+                'MiniBatchSize', mb_size, ...
+                'InitialLearnRate', ini_rate, ...
+                'MaxEpochs', max_epoch);
+
+                        
+                      %'Plots', 'training-progress',...
+
+%% Train the Network  
+
+        % GPU on
+        gpuDevice(1);
+        reset(gpuDevice(1));
+
+myNet = trainNetwork(XTrain3C, YTrain3D, layers, opts);
+
+        % GPU off
+        delete(gcp('nocreate'));
+        gpuDevice([]); 
+
+%% test
+
+% GPU on
+gpuDevice(1);
+reset(gpuDevice(1));
+
+predictedScores = predict(myNet, XTest3C);
+X2Test3D = predictedScores';
+
+% GPU off
+delete(gcp('nocreate'));
+gpuDevice([]);
+
+%%
+[M, I]=max(X2Test3D,[],1);
+acc = sum(I == (YTestD + 1))/lts       
