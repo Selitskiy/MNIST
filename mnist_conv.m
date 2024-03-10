@@ -19,7 +19,7 @@ YTest = test.labels;
 XTestF = reshape(XTest,[n*m,lts]);
 
 %% Continous learning
-k=1; %6;
+k=1; %6 1;
 sub_len = l/k;
 
 for i = 1:k
@@ -67,8 +67,9 @@ XYTestF = vertcat(XTestF,YTestF);
 
 %%
 x_off=0;
-x_in=n*m; %+inj;
+x_in=n*m+inj;
 t_in=1;
+
 
 y_off=0;
 %y_out=1;
@@ -94,7 +95,8 @@ else
     if i == 1
 
         %regNet = Dp2BTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/n);
-        regNet = Conv2x1AENet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/n);
+        %regNet = Conv2x1AENet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/n);
+        regNet = Conv2x1PcTAENet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/n, inj);
 
         %%
         % Matlab's Digits
@@ -112,8 +114,8 @@ else
         gpuDevice(1);
         reset(gpuDevice(1));
     
-        %regNet = regNet.Train(1, XYTrainF, XTrainF);
-        regNet = regNet.Train(1, XTrainF, XTrainF);
+        regNet = regNet.Train(1, XYTrainF, XTrainF);
+        %regNet = regNet.Train(1, XTrainF, XTrainF);
 
         % GPU off
         delete(gcp('nocreate'));
@@ -130,23 +132,23 @@ end
 end
 
 %% LrReLU weights
-%histogram(regNet.lGraph.Layers(5,1).A) %28
-histogram(regNet.lGraph.Layers(7,1).A,'BinLimits',[0.45,1], Normalization="percentage") %43905
-ytickformat("percentage") 
+%%histogram(regNet.lGraph.Layers(5,1).A) %28
+%histogram(regNet.lGraph.Layers(7,1).A,'BinLimits',[0.45,1], Normalization="percentage") %43905
+%ytickformat("percentage") 
 
 %% activations
         % GPU on
-        gpuDevice(1);
-        reset(gpuDevice(1));
+%        gpuDevice(1);
+%        reset(gpuDevice(1));
         
-act1 = activations(regNet.trainedNet, XYTestF(:,:)', 'b_k_hid1');
-ma = max(act1,[],'all');
-mi = min(act1,[],'all');
-actn = (act1 - mi)/(ma - mi);
+%act1 = activations(regNet.trainedNet, XYTestF(:,:)', 'b_k_hid1');
+%ma = max(act1,[],'all');
+%mi = min(act1,[],'all');
+%actn = (act1 - mi)/(ma - mi);
 
         % GPU off
-        delete(gcp('nocreate'));
-        gpuDevice([]); 
+%        delete(gcp('nocreate'));
+%        gpuDevice([]); 
 
 %%
 %i = 1 + floor(rand()*l);
@@ -168,7 +170,7 @@ actn = (act1 - mi)/(ma - mi);
 gpuDevice(1);
 reset(gpuDevice(1));
 
-predictedScores = predict(regNet.trainedNet, XTestF');
+predictedScores = predict(regNet.trainedNet, XYTestF');
 XTestF2 = predictedScores';
 
 % GPU off
@@ -214,7 +216,7 @@ for i=1:10
     If = XGenF2(:,i);
     I2 = reshape(If, [n, m]);
     
-    image(I2 .* 255);
+    image(I2 .* 1255);
     title(string(i-1));
 end
 
@@ -281,23 +283,79 @@ end
 
 
 %% Filters
-W = regNet.lGraph.Layers(2,1).W;
-[nF, sF] = size(W);
-xF = sqrt(sF);
-yF = xF;
+%W = regNet.lGraph.Layers(2,1).W;
+%[nF, sF] = size(W);
+%xF = sqrt(sF);
+%yF = xF;
 
-colormap("default")
+%colormap("default")
 
-for i = 1:nF
-    subplot(3,4,i);
-    If = W(i,:);
-    I2 = reshape(If, [xF, yF]);
+%for i = 1:nF
+%    subplot(5,5,i);
+%    If = W(i,:);
+%    I2 = reshape(If, [xF, yF]);
 
-    image(I2 .* 255);   
+%    image(I2 .* 255);   
+%end
+
+%subplot(5,5,nF+1);
+%If = sum(W, 1);
+%I2 = reshape(If, [xF, yF]);
+
+%image(I2 .* 255); 
+
+    
+ %% mutated results
+d = 1; %1;
+XTestM = XTestF(:,idx(d*inj+1:(d+1)*inj));
+XTestMM = repmat(XTestM', inj+1, 1)';
+
+YTestM = zeros([10, 10*(inj+1)]);
+
+
+for i = 1:10 %mutatuon
+    for j = 1:inj %seed
+        YTestM(i,(i-1)*10+j) = 1;
+    end
 end
 
-    subplot(3,4,nF+1);
-    If = sum(W, 1);
-    I2 = reshape(If, [xF, yF]);
+XYTestM = vertcat(XTestMM,YTestM);
 
-    image(I2 .* 255); 
+% GPU on
+gpuDevice(1);
+reset(gpuDevice(1));
+
+predictedScores = predict(regNet.trainedNet, XYTestM');
+XTestM2 = predictedScores';
+
+% GPU off
+delete(gcp('nocreate'));
+gpuDevice([]);
+
+%% mutated display
+colormap(gray)
+
+for i = 0:11 %mutation
+    for j = 1:inj %seed
+        subplot(12,10,i*10+j);
+
+        if i==0
+            Im = XTestF(:,idx(d*inj+j));
+        else
+            Im = XTestM2(:,(i-1)*10+j);
+        end
+
+        I2m = reshape(Im, [n, m]);
+
+        image(I2m .* 255);
+
+        if i == 0
+            title(strcat('m:-',' s:',string(j-1)));
+        elseif i == 11
+            title(strcat('m:0',' s:',string(j-1)));
+        else
+            title(strcat('m:',string(i-1),' s:',string(j-1)));
+        end
+
+    end
+end   
