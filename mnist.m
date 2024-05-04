@@ -78,7 +78,8 @@ t_out=t_in;
 ini_rate = 0.0002; 
 max_epoch = 100;
 
-modelName = 'mnist_ae';
+%modelName = 'mnist_ae';
+modelName = 'mnist_ae_conv';
 if k == 1
     modelFile = strcat(modelName, '.mat');
 else
@@ -92,7 +93,8 @@ if isfile(modelFile)
 else
     if i == 1
 
-        regNet = Dp2BTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/n);
+        %regNet = Dp2BTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/n);
+        regNet = Conv2x1AENet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/n);
 
         %%
         % Matlab's Digits

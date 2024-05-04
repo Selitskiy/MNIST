@@ -150,10 +150,10 @@ else
 end
 
 %%
-if isfile(modelFile)
-    fprintf('Loading %s %d\n', modelFile, i);
-    load(modelFile, 'regNet');
-else
+%if isfile(modelFile)
+%    fprintf('Loading %s %d\n', modelFile, i);
+%    load(modelFile, 'regNet');
+%else
     if i == 1
 
         %regNet = vis3x3BTransAEBaseNet2D(x_off, x_in, t_in, y_off, y_out, t_out, ini_rate, max_epoch, 1/3, 1/9, 9, 9 ,10);
@@ -184,7 +184,7 @@ else
     save(modelFile, 'regNet');
 
 % end no file - train
-end
+%end
 
 % end of contionous learning
 end
